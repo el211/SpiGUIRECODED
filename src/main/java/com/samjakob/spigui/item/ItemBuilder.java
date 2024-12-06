@@ -1,5 +1,8 @@
 package com.samjakob.spigui.item;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
@@ -12,288 +15,162 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /**
- * A helper class for creating or modifying ItemStacks.
- * <br>
- * The class wraps an ItemStack object and provides convenient chainable, 'builder-pattern' methods for
- * manipulating the stack's metadata.
- * <br>
- * The intention is that this class will be used in builder form - for example;
- * <pre>
- * new ItemBuilder(Material.SPONGE).name("&amp;cAlmighty sponge").amount(21).build();
- * </pre>
- *
- * @author SamJakob
- * @version 2.0.0
- * @see ItemStack
+ * A helper class for creating or modifying ItemStacks with support for Adventure's Component system, MiniMessage,
+ * and legacy string compatibility. This class includes additional methods for managing item colors and data values.
  */
 public class ItemBuilder {
 
-    /**
-     * The item stack being built.
-     */
     private final ItemStack stack;
 
-    /* CONSTRUCT */
+    /* CONSTRUCTORS */
 
-    /**
-     * Creates an {@link ItemStack} and {@link ItemBuilder} wrapper for a new stack with the
-     * given type.
-     *
-     * @param material The {@link Material} to use when creating the stack.
-     */
-    public ItemBuilder (Material material) {
+    public ItemBuilder(Material material) {
         this.stack = new ItemStack(material);
     }
 
-    /**
-     * Creates an ItemBuilder wrapper for a given stack.
-     * @param stack The ItemStack to wrap.
-     */
-    public ItemBuilder (ItemStack stack) {
+    public ItemBuilder(ItemStack stack) {
         this.stack = stack;
     }
 
-    /* MANIPULATE / READ */
+    /* ITEM TYPE */
 
-    /**
-     * Sets the type ({@link Material}) of the ItemStack.
-     *
-     * @param material The {@link Material} of the stack.
-     * @return The {@link ItemBuilder} instance.
-     */
     public ItemBuilder type(Material material) {
         stack.setType(material);
         return this;
     }
 
-    /**
-     * Returns the type ({@link Material}) of the ItemStack.
-     *
-     * @return The {@link Material} of the stack.
-     */
     public Material getType() {
         return stack.getType();
     }
 
-    /**
-     * Sets the display name of the item.
-     * Color codes using the ampersand (&amp;) are translated, if you want to avoid this,
-     * you should wrap your name argument with a {@link ChatColor#stripColor(String)} call.
-     *
-     * @param name The desired display name of the item stack.
-     * @return The {@link ItemBuilder} instance.
-     */
-    public ItemBuilder name(String name) {
-        ItemMeta stackMeta = stack.getItemMeta();
-        stackMeta.setDisplayName(ChatColor.RESET + ChatColor.translateAlternateColorCodes('&', name));
-        stack.setItemMeta(stackMeta);
+    /* NAME METHODS */
+
+    public ItemBuilder name(Component name) {
+        ItemMeta meta = stack.getItemMeta();
+        meta.displayName(name);
+        stack.setItemMeta(meta);
         return this;
     }
 
-    /**
-     * Returns either the display name of the item, if it exists, or null if it doesn't.
-     * <br>
-     * You should note that this method fetches the name directly from the stack's {@link ItemMeta},
-     * so you should take extra care when comparing names with color codes - particularly if you used the
-     * {@link #name(String)} method as they will be in their translated sectional symbol (§) form,
-     * rather than their 'coded' form (&amp;).
-     * <br>
-     * For example, if you used {@link #name(String)} to set the name to '&amp;cMy Item', the output of this
-     * method would be '§cMy Item'
-     *
-     * @return The item's display name as returned from its {@link ItemMeta}.
-     */
-    public String getName() {
-        if (!stack.hasItemMeta() || !stack.getItemMeta().hasDisplayName()) return null;
-        return stack.getItemMeta().getDisplayName();
+    public ItemBuilder nameFromMiniMessage(String miniMessage) {
+        return name(MiniMessage.miniMessage().deserialize(miniMessage));
     }
 
-    /**
-     * Sets the amount of items in the {@link ItemStack}.
-     *
-     * @param amount The new amount.
-     * @return The {@link ItemBuilder} instance.
-     */
+    public ItemBuilder name(String name) {
+        return name(LegacyComponentSerializer.legacyAmpersand().deserialize(name));
+    }
+
+    public Component getNameComponent() {
+        if (!stack.hasItemMeta()) return null;
+        return stack.getItemMeta().displayName();
+    }
+
+    public String getName() {
+        Component nameComponent = getNameComponent();
+        return nameComponent != null ? LegacyComponentSerializer.legacyAmpersand().serialize(nameComponent) : null;
+    }
+
+    /* LORE METHODS */
+
+    public ItemBuilder lore(List<Component> lore) {
+        ItemMeta meta = stack.getItemMeta();
+        meta.lore(lore);
+        stack.setItemMeta(meta);
+        return this;
+    }
+
+    public ItemBuilder loreFromMiniMessage(List<String> miniMessages) {
+        List<Component> components = miniMessages.stream()
+                .map(MiniMessage.miniMessage()::deserialize)
+                .collect(Collectors.toList());
+        return lore(components);
+    }
+
+    public ItemBuilder lore(String... lore) {
+        return lore(Arrays.stream(lore)
+                .map(LegacyComponentSerializer.legacyAmpersand()::deserialize)
+                .collect(Collectors.toList()));
+    }
+
+    public List<Component> getLoreComponents() {
+        if (!stack.hasItemMeta()) return null;
+        return stack.getItemMeta().lore();
+    }
+
+    public List<String> getLore() {
+        List<Component> loreComponents = getLoreComponents();
+        return loreComponents != null ? loreComponents.stream()
+                .map(LegacyComponentSerializer.legacyAmpersand()::serialize)
+                .collect(Collectors.toList()) : null;
+    }
+
+    /* ITEM AMOUNT */
+
     public ItemBuilder amount(int amount) {
         stack.setAmount(amount);
         return this;
     }
 
-    /**
-     * Returns the amount of items in the {@link ItemStack}.
-     *
-     * @return The amount of items in the stack.
-     */
     public int getAmount() {
         return stack.getAmount();
     }
 
-    /**
-     * Sets the lore of the item. This method is a var-args alias for the
-     * {@link #lore(List)} method.
-     *
-     * @param lore The desired lore of the item, with each line as a separate string.
-     * @return The {@link ItemBuilder} instance.
-     */
-    public ItemBuilder lore(String... lore) {
-        return lore(Arrays.asList(lore));
-    }
+    /* DURABILITY / DATA / COLOR */
 
-    /**
-     * Sets the lore of the item.
-     * As with {@link #name(String)}, color codes will be replaced. Each string represents
-     * a line of the lore.
-     * <br>
-     * Lines will not be automatically wrapped or truncated, so it is recommended you take
-     * some consideration into how the item will be rendered with the lore.
-     *
-     * @param lore The desired lore of the item, with each line as a separate string.
-     * @return The {@link ItemBuilder} instance.
-     */
-    public ItemBuilder lore(List<String> lore) {
-        lore.replaceAll(textToTranslate -> ChatColor.RESET + ChatColor.translateAlternateColorCodes('&', textToTranslate));
-
-        ItemMeta stackMeta = stack.getItemMeta();
-        stackMeta.setLore(lore);
-        stack.setItemMeta(stackMeta);
-        return this;
-    }
-
-    /**
-     * Gets the lore of the item as a list of strings. Each string represents a line of the
-     * item's lore in-game.
-     * <br>
-     * As with {@link #name(String)}, it should be noted that color-coded lore lines will
-     * be returned with the colors codes already translated.
-     *
-     * @return The lore of the item.
-     */
-    public List<String> getLore() {
-        if (!stack.hasItemMeta() || !stack.getItemMeta().hasLore()) return null;
-        return stack.getItemMeta().getLore();
-    }
-
-    /**
-     * An alias for {@link #durability(short)} that takes an {@link ItemDataColor} as an
-     * argument instead. This is to improve code readability when working with items such
-     * as glass panes, where the data value represents a glass pane's color.
-     * <br>
-     * This method will still be functional for items where the data value does not represent
-     * the item's color, however it will obviously be nonsensical.
-     *
-     * @param color The desired color of the item.
-     * @return The {@link ItemBuilder} instance.
-     */
-    public ItemBuilder color(ItemDataColor color) {
-        return durability(color.getValue());
-    }
-
-    /**
-     * An alias for {@link #durability(short)}.
-     *
-     * @param data The desired data-value (durability) of the item.
-     * @return The {@link ItemBuilder} instance.
-     */
-    public ItemBuilder data(short data) {
-        return durability(data);
-    }
-
-    /**
-     * Sets the durability (data value) of the item.
-     *
-     * @param durability The desired durability of the item.
-     * @return The updated {@link ItemBuilder} object.
-     */
     public ItemBuilder durability(short durability) {
         stack.setDurability(durability);
         return this;
     }
 
-    /**
-     * Returns the durability or data value of the item.
-     *
-     * @return The durability of the item.
-     */
     public short getDurability() {
         return stack.getDurability();
     }
 
-    /**
-     * Essentially a proxy for {@link ItemDataColor#getByValue(short)}.
-     * <br>
-     * Similar to {@link #getDurability()} however it returns the value as an {@link ItemDataColor}
-     * where it is applicable, or null where it isn't.
-     *
-     * @return The appropriate {@link ItemDataColor} of the item or null.
-     */
+    public ItemBuilder data(short data) {
+        return durability(data);
+    }
+
+    public ItemBuilder color(ItemDataColor color) {
+        return durability(color.getValue());
+    }
+
     public ItemDataColor getColor() {
         return ItemDataColor.getByValue(stack.getDurability());
     }
 
-    /**
-     * Adds the specified enchantment to the stack.
-     * <br>
-     * This method uses {@link ItemStack#addUnsafeEnchantment(Enchantment, int)} rather than {@link ItemStack#addEnchantment(Enchantment, int)}
-     * to avoid the associated checks of whether level is within the range for the enchantment.
-     *
-     * @param enchantment The enchantment to apply to the item.
-     * @param level The level of the enchantment to apply to the item.
-     * @return The {@link ItemBuilder} instance.
-     */
+    /* ENCHANTMENTS */
+
     public ItemBuilder enchant(Enchantment enchantment, int level) {
         stack.addUnsafeEnchantment(enchantment, level);
         return this;
     }
 
-    /**
-     * Removes the specified enchantment from the stack.
-     *
-     * @param enchantment The enchantment to remove from the item.
-     * @return The {@link ItemBuilder} instance.
-     */
     public ItemBuilder unenchant(Enchantment enchantment) {
         stack.removeEnchantment(enchantment);
         return this;
     }
 
-    /**
-     * Accepts a variable number of {@link ItemFlag}s to apply to the stack.
-     *
-     * @param flag A variable-length argument containing the flags to be applied.
-     * @return The {@link ItemBuilder} instance.
-     */
-    public ItemBuilder flag(ItemFlag ...flag) {
+    /* ITEM FLAGS */
+
+    public ItemBuilder flag(ItemFlag... flags) {
         ItemMeta meta = stack.getItemMeta();
-        meta.addItemFlags(flag);
+        meta.addItemFlags(flags);
         stack.setItemMeta(meta);
         return this;
     }
 
-    /**
-     * Accepts a variable number of {@link ItemFlag}s to remove from the stack.
-     *
-     * @param flag A variable-length argument containing the flags to be removed.
-     * @return The {@link ItemBuilder} instance.
-     */
-    public ItemBuilder deflag(ItemFlag ...flag) {
+    public ItemBuilder deflag(ItemFlag... flags) {
         ItemMeta meta = stack.getItemMeta();
-        meta.removeItemFlags(flag);
+        meta.removeItemFlags(flags);
         stack.setItemMeta(meta);
         return this;
     }
 
-    /**
-     * If the item has {@link SkullMeta} (i.e. if the item is a skull), this can
-     * be used to set the skull's owner (i.e. the player the skull represents.)
-     * <br>
-     * This also sets the skull's data value to 3 for 'player head', as setting
-     * the skull's owner doesn't make much sense for the mob skulls.
-     *
-     * @param name The name of the player the skull item should resemble.
-     * @return The {@link ItemBuilder} instance.
-     */
+    /* SKULL OWNER */
+
     public ItemBuilder skullOwner(String name) {
         if (!(stack.getItemMeta() instanceof SkullMeta)) return this;
 
@@ -305,51 +182,20 @@ public class ItemBuilder {
         return this;
     }
 
-    /* PREDICATE MANIPULATION */
+    /* CONDITIONAL OPERATIONS */
 
-    /**
-     * This is used to, inline, perform an operation if a given condition is true.
-     * <br>
-     * The {@link ItemBuilder} instance is supplied to both the predicate (condition) and result function.
-     * The result of <code>then</code> is ignored as the ItemBuilder reference is passed to it.
-     * <br>
-     * Example:
-     * <pre>
-     * // Renames the ItemStack, if and only if, the stack's type is Acacia Doors.
-     * ifThen(stack -&gt; stack.getType() == Material.ACACIA_DOOR, stack -&gt; stack.name("&amp;aMagic Door"));
-     * </pre>
-     *
-     * @param ifTrue The condition upon which, <code>then</code> should be performed.
-     * @param then The action to perform if the predicate, <code>ifTrue</code>, is true.
-     * @return The {@link ItemBuilder} instance.
-     */
-    public ItemBuilder ifThen(Predicate<ItemBuilder> ifTrue, Function<ItemBuilder, Object> then) {
-        if (ifTrue.test(this))
-            then.apply(this);
-
+    public ItemBuilder ifThen(Predicate<ItemBuilder> condition, Function<ItemBuilder, Object> action) {
+        if (condition.test(this)) action.apply(this);
         return this;
     }
 
-    /* BUILD */
+    /* BUILD METHODS */
 
-    /**
-     * An alias for {@link #get()}.
-     * @return See {@link #get()}.
-     */
     public ItemStack build() {
-        return get();
-    }
-
-    /**
-     * Returns the {@link ItemStack} that the {@link ItemBuilder} instance represents.
-     * <br>
-     * The modifications are performed as they are called, so this method simply returns
-     * the class's private stack field.
-     *
-     * @return The manipulated ItemStack.
-     */
-    public ItemStack get() {
         return stack;
     }
 
+    public ItemStack get() {
+        return stack;
+    }
 }
