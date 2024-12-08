@@ -2,10 +2,14 @@ package com.samjakob.spigui.menu;
 
 import com.samjakob.spigui.SpiGUI;
 import com.samjakob.spigui.buttons.SGButton;
+
 import com.samjakob.spigui.toolbar.SGToolbarBuilder;
 import com.samjakob.spigui.toolbar.SGToolbarButtonType;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryAction;
@@ -15,6 +19,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 
 public class SGMenu implements InventoryHolder {
@@ -22,6 +27,7 @@ public class SGMenu implements InventoryHolder {
     private final JavaPlugin owner;
     private final SpiGUI spiGUI;
     private String name;
+    private Component componentName; // Modern Adventure title
     private String tag;
     private int rowsPerPage;
     private final Map<Integer, SGButton> items;
@@ -34,7 +40,6 @@ public class SGMenu implements InventoryHolder {
     private Consumer<SGMenu> onClose;
     private Consumer<SGMenu> onPageChange;
 
-
     private HashSet<ClickType> permittedMenuClickTypes;
 
     private HashSet<InventoryAction> blockedMenuActions;
@@ -46,12 +51,12 @@ public class SGMenu implements InventoryHolder {
             ClickType.RIGHT
     };
 
-    private static final InventoryAction[] DEFAULT_BLOCKED_MENU_ACTIONS = new InventoryAction[] {
+    private static final InventoryAction[] DEFAULT_BLOCKED_MENU_ACTIONS = new InventoryAction[]{
             InventoryAction.MOVE_TO_OTHER_INVENTORY,
             InventoryAction.COLLECT_TO_CURSOR
     };
 
-    private static final InventoryAction[] DEFAULT_BLOCKED_ADJACENT_ACTIONS = new InventoryAction[] {
+    private static final InventoryAction[] DEFAULT_BLOCKED_ADJACENT_ACTIONS = new InventoryAction[]{
             InventoryAction.MOVE_TO_OTHER_INVENTORY,
             InventoryAction.COLLECT_TO_CURSOR
     };
@@ -60,6 +65,7 @@ public class SGMenu implements InventoryHolder {
         this.owner = owner;
         this.spiGUI = spiGUI;
         this.name = ChatColor.translateAlternateColorCodes('&', name);
+        this.componentName = LegacyComponentSerializer.legacyAmpersand().deserialize(this.name); // Convert to Component
         this.rowsPerPage = rowsPerPage;
         this.tag = tag;
 
@@ -67,42 +73,64 @@ public class SGMenu implements InventoryHolder {
         this.stickiedSlots = new HashSet<>();
 
         this.currentPage = 0;
-        // Initialize permitted and blocked actions with defaults
-        this.permittedMenuClickTypes = new HashSet<>(Arrays.asList(DEFAULT_PERMITTED_MENU_CLICK_TYPES));
-        this.blockedMenuActions = new HashSet<>(Arrays.asList(DEFAULT_BLOCKED_MENU_ACTIONS));
-        this.blockedAdjacentActions = new HashSet<>(Arrays.asList(DEFAULT_BLOCKED_ADJACENT_ACTIONS));
+        this.permittedMenuClickTypes = new HashSet<>();
+        this.blockedMenuActions = new HashSet<>();
+        this.blockedAdjacentActions = new HashSet<>();
+    }
+
+    public SGMenu(JavaPlugin owner, SpiGUI spiGUI, Component componentName, int rowsPerPage, String tag) {
+        this.owner = owner;
+        this.spiGUI = spiGUI;
+        this.componentName = componentName;
+        this.name = LegacyComponentSerializer.legacyAmpersand().serialize(componentName); // Convert to String
+        this.rowsPerPage = rowsPerPage;
+        this.tag = tag;
+
+        this.items = new HashMap<>();
+        this.stickiedSlots = new HashSet<>();
+
+        this.currentPage = 0;
+        this.permittedMenuClickTypes = new HashSet<>();
+        this.blockedMenuActions = new HashSet<>();
+        this.blockedAdjacentActions = new HashSet<>();
     }
 
 
-    /// INVENTORY SETTINGS ///
+    public SGMenu(JavaPlugin owner, SpiGUI spiGUI, String miniMessageName, int rowsPerPage, String tag, boolean isMiniMessage) {
+        this.owner = owner;
+        this.spiGUI = spiGUI;
 
-    /**
-     * This is a per-inventory version of {@link SpiGUI#setBlockDefaultInteractions(boolean)}.
-     *
-     * @see SpiGUI#setBlockDefaultInteractions(boolean)
-     * @param blockDefaultInteractions Whether the default behavior of click events should be cancelled.
-     */
+        if (isMiniMessage) {
+            // Use MiniMessage to parse the name into an Adventure Component
+            this.componentName = MiniMessage.miniMessage().deserialize(miniMessageName);
+            this.name = LegacyComponentSerializer.legacyAmpersand().serialize(this.componentName);
+        } else {
+            // Use legacy string formatting for name
+            this.name = ChatColor.translateAlternateColorCodes('&', miniMessageName);
+            this.componentName = LegacyComponentSerializer.legacyAmpersand().deserialize(this.name);
+        }
+
+        this.rowsPerPage = rowsPerPage;
+        this.tag = tag;
+
+        this.items = new HashMap<>();
+        this.stickiedSlots = new HashSet<>();
+
+        this.currentPage = 0;
+        this.permittedMenuClickTypes = new HashSet<>();
+        this.blockedMenuActions = new HashSet<>();
+        this.blockedAdjacentActions = new HashSet<>();
+    }
+
     public void setBlockDefaultInteractions(boolean blockDefaultInteractions) {
         this.blockDefaultInteractions = blockDefaultInteractions;
     }
 
-    /**
-     * This is a per-inventory version of {@link SpiGUI#areDefaultInteractionsBlocked()}.
-     *
-     * @see SpiGUI#areDefaultInteractionsBlocked()
-     * @return Whether the default behavior of click events should be cancelled.
-     */
+
     public Boolean areDefaultInteractionsBlocked() {
         return blockDefaultInteractions;
     }
 
-    /**
-     * This is a per-inventory version of {@link SpiGUI#setEnableAutomaticPagination(boolean)}.
-     * If this value is set, it overrides the per-plugin option set in {@link SpiGUI}.
-     *
-     * @see SpiGUI#setEnableAutomaticPagination(boolean)
-     * @param enableAutomaticPagination Whether pagination buttons should be automatically added.
-     */
     public void setAutomaticPaginationEnabled(boolean enableAutomaticPagination) {
         this.enableAutomaticPagination = enableAutomaticPagination;
     }
@@ -145,9 +173,32 @@ public class SGMenu implements InventoryHolder {
     }
 
     public void setName(String name) {
+        // Update legacy name with color codes
         this.name = ChatColor.translateAlternateColorCodes('&', name);
+        // Convert legacy name to Component for hex gradient support
+        this.componentName = MiniMessage.miniMessage().deserialize(this.name);
     }
 
+    public void setName(Component componentName) {
+        this.componentName = componentName;
+        this.name = LegacyComponentSerializer.legacySection().serialize(componentName);
+    }
+
+    public void setNameFromMiniMessage(String miniMessage) {
+        this.componentName = MiniMessage.miniMessage().deserialize(miniMessage);
+        this.name = LegacyComponentSerializer.legacySection().serialize(this.componentName);
+    }
+
+
+    public Component getComponentName() {
+        return componentName;
+    }
+
+
+    public void setComponentName(Component componentName) {
+        this.componentName = componentName;
+        this.name = LegacyComponentSerializer.legacyAmpersand().serialize(componentName);
+    }
 
     public void setRawName(String name) {
         this.name = name;
@@ -177,9 +228,23 @@ public class SGMenu implements InventoryHolder {
     }
 
 
+    private String parseTitleWithMiniMessage(String rawTitle) {
+        return LegacyComponentSerializer.legacyAmpersand()
+                .serialize(MiniMessage.miniMessage().deserialize(rawTitle));
+    }
+
+
     public void setButton(int slot, SGButton button) {
+        if (button.getIcon().hasItemMeta() && button.getIcon().getItemMeta().hasLore()) {
+            // Convert lore to support hex gradients via MiniMessage
+            List<Component> loreComponents = button.getIcon().getItemMeta().getLore().stream()
+                    .map(MiniMessage.miniMessage()::deserialize)
+                    .collect(Collectors.toList());
+            button.getIcon().editMeta(meta -> meta.lore(loreComponents));
+        }
         items.put(slot, button);
     }
+
 
 
     public void setButton(int page, int slot, SGButton button) {
@@ -224,7 +289,7 @@ public class SGMenu implements InventoryHolder {
     }
 
 
-    public void setCurrentPage (int page) {
+    public void setCurrentPage(int page) {
         this.currentPage = page;
         if (this.onPageChange != null) this.onPageChange.accept(this);
     }
@@ -253,10 +318,10 @@ public class SGMenu implements InventoryHolder {
             refreshInventory(viewer);
             if (this.onPageChange != null) this.onPageChange.accept(this);
             return true;
-        } else {
-            return false;
         }
+        return false;
     }
+
 
     public boolean previousPage(HumanEntity viewer) {
         if (currentPage > 0) {
@@ -264,9 +329,8 @@ public class SGMenu implements InventoryHolder {
             refreshInventory(viewer);
             if (this.onPageChange != null) this.onPageChange.accept(this);
             return true;
-        } else {
-            return false;
         }
+        return false;
     }
 
 
@@ -405,9 +469,10 @@ public class SGMenu implements InventoryHolder {
             return;
         }
 
+        // Dynamically set the new name using placeholders.
+        String newName = parseTitleWithPlaceholders(componentName, name);
+
         // If the name has changed, we'll need to open a new inventory.
-        String newName = name.replace("{currentPage}", String.valueOf(currentPage + 1))
-                .replace("{maxPage}", String.valueOf(getMaxPage()));
         if (!viewer.getOpenInventory().getTitle().equals(newName)) {
             viewer.openInventory(getInventory());
             return;
@@ -417,8 +482,27 @@ public class SGMenu implements InventoryHolder {
         viewer.getOpenInventory().getTopInventory().setContents(getInventory().getContents());
     }
 
+
+    private String parseTitleWithPlaceholders(Component component, String rawText) {
+        Component processedComponent = (component != null ? component : MiniMessage.miniMessage().deserialize(rawText))
+                .replaceText(builder -> builder
+                        .matchLiteral("{currentPage}").replacement(String.valueOf(currentPage + 1))
+                        .matchLiteral("{maxPage}").replacement(String.valueOf(getMaxPage()))
+                );
+        return LegacyComponentSerializer.legacySection().serialize(processedComponent);
+    }
+
+
+
+    private String parseMiniMessage(String rawText) {
+        return LegacyComponentSerializer.legacyAmpersand()
+                .serialize(MiniMessage.miniMessage().deserialize(rawText));
+    }
+
+
     @Override
     public Inventory getInventory() {
+        // Determine if automatic pagination is enabled.
         boolean isAutomaticPaginationEnabled = spiGUI.isAutomaticPaginationEnabled();
         if (isAutomaticPaginationEnabled() != null) {
             isAutomaticPaginationEnabled = isAutomaticPaginationEnabled();
@@ -426,21 +510,36 @@ public class SGMenu implements InventoryHolder {
 
         boolean needsPagination = getMaxPage() > 0 && isAutomaticPaginationEnabled;
 
+        // Generate the inventory title using MiniMessage and Adventure Components.
+        String title;
+        if (componentName != null) {
+            Component processedComponent = componentName.replaceText(builder -> builder
+                    .matchLiteral("{currentPage}").replacement(String.valueOf(currentPage + 1))
+                    .matchLiteral("{maxPage}").replacement(String.valueOf(getMaxPage()))
+            );
+            title = LegacyComponentSerializer.legacySection().serialize(processedComponent);
+        } else {
+            Component parsedComponent = MiniMessage.miniMessage().deserialize(name)
+                    .replaceText(builder -> builder
+                            .matchLiteral("{currentPage}").replacement(String.valueOf(currentPage + 1))
+                            .matchLiteral("{maxPage}").replacement(String.valueOf(getMaxPage()))
+                    );
+            title = LegacyComponentSerializer.legacySection().serialize(parsedComponent);
+        }
+
+        // Determine the inventory size based on pagination needs.
         Inventory inventory = Bukkit.createInventory(this, (
-                        (needsPagination)
-                                // Pagination enabled: add the bottom toolbar row.
+                        needsPagination
+                                // Add an extra row for pagination buttons if enabled.
                                 ? getPageSize() + 9
-                                // Pagination not required or disabled.
                                 : getPageSize()
                 ),
-                name.replace("{currentPage}", String.valueOf(currentPage + 1))
-                        .replace("{maxPage}", String.valueOf(getMaxPage()))
+                title
         );
 
-        // Add the main inventory items.
+        // Populate the main inventory items.
         for (int key = currentPage * getPageSize(); key < (currentPage + 1) * getPageSize(); key++) {
-            // If we've already reached the maximum assigned slot, stop assigning
-            // slots.
+            // Stop if the maximum assigned slot has been reached.
             if (key > getHighestFilledSlot()) break;
 
             if (items.containsKey(key)) {
@@ -448,12 +547,12 @@ public class SGMenu implements InventoryHolder {
             }
         }
 
-        // Update the stickied slots.
+        // Add stickied slots to the inventory.
         for (int stickiedSlot : stickiedSlots) {
             inventory.setItem(stickiedSlot, items.get(stickiedSlot).getIcon());
         }
 
-        // Render the pagination items.
+        // Add pagination buttons if needed.
         if (needsPagination) {
             SGToolbarBuilder toolbarButtonBuilder = spiGUI.getDefaultToolbarBuilder();
             if (getToolbarBuilder() != null) {
@@ -464,8 +563,9 @@ public class SGMenu implements InventoryHolder {
             for (int i = pageSize; i < pageSize + 9; i++) {
                 int offset = i - pageSize;
 
+                // Build pagination buttons using the toolbar builder.
                 SGButton paginationButton = toolbarButtonBuilder.buildToolbarButton(
-                        offset, getCurrentPage(), SGToolbarButtonType.getDefaultForSlot(offset),this
+                        offset, getCurrentPage(), SGToolbarButtonType.getDefaultForSlot(offset), this
                 );
                 inventory.setItem(i, paginationButton != null ? paginationButton.getIcon() : null);
             }
@@ -473,5 +573,4 @@ public class SGMenu implements InventoryHolder {
 
         return inventory;
     }
-
 }

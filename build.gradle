@@ -5,7 +5,7 @@ plugins {
 }
 
 group 'com.samjakob'
-version '1.4.0'
+version '1.7.0'
 uri "https://github.com/SamJakob/SpiGUI"
 
 java {
@@ -16,34 +16,35 @@ java {
     withSourcesJar()
 }
 
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+
+    withJavadocJar()
+    withSourcesJar()
+}
+
 repositories {
     mavenCentral()
 
     maven {
-        // Sonatype (for bungeecord-chat used by Spigot)
-        url "https://oss.sonatype.org/content/repositories/snapshots/"
-    }
-
-    maven {
-        // Spigot Nexus
-        url "https://hub.spigotmc.org/nexus/content/repositories/snapshots/"
-    }
-
-    maven {
-        // Adventure API
         url "https://papermc.io/repo/repository/maven-public/"
+    }
+
+    maven {
+        name = "sonatype"
+        url = "https://oss.sonatype.org/content/groups/public/"
     }
 }
 
 dependencies {
-    // Spigot API
-    compileOnly group: 'org.spigotmc', name: 'spigot-api', version: '1.8.8-R0.1-SNAPSHOT'
-    testCompileOnly group: 'org.spigotmc', name: 'spigot-api', version: '1.8.8-R0.1-SNAPSHOT'
+    compileOnly "io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT"
 
-    // Adventure API
-    implementation group: 'net.kyori', name: 'adventure-api', version: '4.14.0'
-    implementation group: 'net.kyori', name: 'adventure-text-serializer-legacy', version: '4.14.0'
-    implementation group: 'net.kyori', name: 'adventure-text-minimessage', version: '4.14.0'
+    implementation "net.kyori:adventure-api:4.17.0"
+    implementation "net.kyori:adventure-text-minimessage:4.17.0"
+    implementation "net.kyori:adventure-text-serializer-legacy:4.17.0"
+
+    testImplementation "io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT"
 }
 
 // Builds Spigot runnable plugin from the test package.
@@ -104,8 +105,8 @@ publishing {
                     : 'https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/'
 
             credentials {
-                username = ossrhUsername
-                password = ossrhPassword
+                username = 'el211'
+                password = 'ELIASps4@@'
             }
         }
     }

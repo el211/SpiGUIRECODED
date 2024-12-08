@@ -116,7 +116,7 @@ public class SpiGUITest extends JavaPlugin {
                 });
 
                 myAwesomeMenu.setButton(0, 10, new SGButton(
-                        new ItemBuilder(Material.SKULL_ITEM)
+                        new ItemBuilder(Material.PLAYER_HEAD)
                                 .skullOwner(player.getName())
                                 .name("&e&l" + player.getDisplayName())
                                 .lore(
@@ -130,6 +130,7 @@ public class SpiGUITest extends JavaPlugin {
                                         "&eExperience: &6" + player.getTotalExperience()
                                 )
                                 .build()
+
                 ));
 
                 myAwesomeMenu.setButton(1, 0, new SGButton(
@@ -203,9 +204,9 @@ public class SpiGUITest extends JavaPlugin {
 
                                 private SGButton nextColorButton() {
                                     return new SGButton(
-                                            new ItemBuilder(Material.STAINED_GLASS_PANE)
+                                            new ItemBuilder(Material.WHITE_STAINED_GLASS_PANE)
                                                     .name("&" + Integer.toHexString(currentColor) + "&lSpiGUI!!!")
-                                                    .data(currentColor)
+                                                    .data(currentColor) // Ensure this is appropriate for your logic
                                                     .build()
                                     );
                                 }
