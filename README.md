@@ -24,6 +24,7 @@ SpiGUI is a robust and flexible inventory management library for Bukkit/Spigot/P
 3. Restart your server.
 
 ## Getting Started
+[![](https://jitpack.io/v/el211/SpiGUIRECODED.svg)](https://jitpack.io/#el211/SpiGUIRECODED)
 
 ### Setting Up a Basic GUI
 ```java
