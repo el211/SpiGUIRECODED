@@ -4,8 +4,8 @@ plugins {
     id 'signing'
 }
 
-group = 'com.samjakob'
-version = '1.8.0'
+group = 'com.github.el211'
+version = '1.0.0'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -45,7 +45,6 @@ dependencies {
     testImplementation "io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT"
 }
 
-
 tasks.register('testJar', Jar) {
     from sourceSets.main.output.classesDirs
     from sourceSets.test.output.classesDirs
@@ -65,7 +64,7 @@ publishing {
             pom {
                 name.set('SpiGUI')
                 description.set('A comprehensive GUI API for Spigot with pages support.')
-                url.set('https://github.com/SamJakob/SpiGUI')
+                url.set('https://github.com/el211/SpiGUIRECODED')
 
                 licenses {
                     license {
@@ -76,18 +75,18 @@ publishing {
 
                 developers {
                     developer {
-                        id.set('SamJakob')
-                        name.set('Sam Jakob')
-                        email.set('me@samjakob.com')
-                        organization.set('SamJakob')
-                        organizationUrl.set('https://samjakob.com')
+                        id.set('el211')
+                        name.set('Elias')
+                        email.set('elias@example.com')
+                        organization.set('Elias')
+                        organizationUrl.set('https://github.com/el211')
                     }
                 }
 
                 scm {
-                    connection.set('scm:git:git://github.com/SamJakob/SpiGUI.git')
-                    developerConnection.set('scm:git:ssh://github.com:SamJakob/SpiGUI.git')
-                    url.set('https://github.com/SamJakob/SpiGUI')
+                    connection.set('scm:git:git://github.com/el211/SpiGUIRECODED.git')
+                    developerConnection.set('scm:git:ssh://github.com:el211/SpiGUIRECODED.git')
+                    url.set('https://github.com/el211/SpiGUIRECODED')
                 }
             }
         }
@@ -95,8 +94,8 @@ publishing {
 
     repositories {
         maven {
-            url = version.endsWith("SNAPSHOT") \
-                    ? "https://s01.oss.sonatype.org/content/repositories/snapshots/" \
+            url = version.endsWith("SNAPSHOT")
+                    ? "https://s01.oss.sonatype.org/content/repositories/snapshots/"
                     : "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
 
             credentials {
@@ -125,5 +124,3 @@ javadoc {
         memberLevel = JavadocMemberLevel.PRIVATE
     }
 }
-
-
