@@ -1,18 +1,18 @@
 package com.samjakob.spigui.buttons;
 
-import org.bukkit.event.inventory.InventoryClickEvent;
+import com.samjakob.spigui.events.SGButtonClickEvent;
 
 /**
  * Holds the event handler for an SGButton.
  */
+@FunctionalInterface
 public interface SGButtonListener {
 
     /**
      * The event handler that should be executed when an SGButton is clicked.
      * Implement this with a lambda when you create an SGButton.
      *
-     * @param event The Bukkit/Spigot APIs {@link InventoryClickEvent}.
+     * @param event The custom {@link SGButtonClickEvent} representing the button click.
      */
-    void onClick(InventoryClickEvent event);
-
+    void onClick(SGButtonClickEvent event);
 }

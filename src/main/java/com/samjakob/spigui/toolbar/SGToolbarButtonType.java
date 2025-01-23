@@ -1,55 +1,32 @@
 package com.samjakob.spigui.toolbar;
 
-import java.util.AbstractMap;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-/**
- * Represents pre-defined types for toolbar buttons.
- * These can be used to easily re-define the buttons used in a toolbar, without
- * creating an entirely custom toolbar implementation.
- */
 public enum SGToolbarButtonType {
+    PREV_BUTTON(3),
+    CURRENT_BUTTON(4),
+    NEXT_BUTTON(5),
+    UNASSIGNED(-1); // Default for unassigned slots.
 
-    /** The "previous page" pagination button. */
-    PREV_BUTTON,
+    private final int defaultSlot;
 
-    /**
-     * The "current page" indicator button (doesn't necessarily have an action
-     * associated).
-     */
-    CURRENT_BUTTON,
+    // Reverse lookup map for slot-to-button type mapping.
+    private static final Map<Integer, SGToolbarButtonType> SLOT_TO_TYPE_MAP = Stream.of(values())
+            .filter(type -> type.defaultSlot >= 0) // Exclude unassigned by default
+            .collect(Collectors.toMap(SGToolbarButtonType::getDefaultSlot, Function.identity()));
 
-    /** The "next page" pagination button. */
-    NEXT_BUTTON,
-
-    /** No pre-defined action or button. */
-    UNASSIGNED;
-
-    /**
-     * The default mappings between slot number and {@link SGToolbarButtonType}.
-     * This intended for use in setting (or falling back to) defaults for toolbar buttons,
-     * or for minor tweaks to existing buttons in a toolbar, as opposed to entirely new
-     * custom toolbars.
-     */
-    private static final Map<Integer, SGToolbarButtonType> DEFAULT_MAPPINGS = Stream.of(
-        new AbstractMap.SimpleImmutableEntry<>(3, PREV_BUTTON),
-        new AbstractMap.SimpleImmutableEntry<>(4, CURRENT_BUTTON),
-        new AbstractMap.SimpleImmutableEntry<>(5, NEXT_BUTTON)
-    ).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-
-    /**
-     * Returns the default mapping between a given toolbar slot number (from 0 to 8),
-     * and {@link SGToolbarButtonType}. This intended for use in setting (or falling
-     * back to) defaults for toolbar buttons, or for minor tweaks to existing buttons
-     * in a toolbar, as opposed to entirely new custom toolbars.
-     * @param slot The slot number to get the default button type mapping for.
-     * @return The default button type mapping for the specified slot.
-     *  Alternatively, {@link SGToolbarButtonType#UNASSIGNED} if there isn't one.
-     */
-    public static SGToolbarButtonType getDefaultForSlot(int slot) {
-        return DEFAULT_MAPPINGS.getOrDefault(slot, SGToolbarButtonType.UNASSIGNED);
+    SGToolbarButtonType(int defaultSlot) {
+        this.defaultSlot = defaultSlot;
     }
 
+    public int getDefaultSlot() {
+        return defaultSlot;
+    }
+
+    public static SGToolbarButtonType getDefaultForSlot(int slot) {
+        return SLOT_TO_TYPE_MAP.getOrDefault(slot, UNASSIGNED);
+    }
 }

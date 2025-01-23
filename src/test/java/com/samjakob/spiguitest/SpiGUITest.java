@@ -66,53 +66,31 @@ public class SpiGUITest extends JavaPlugin {
 
             Player player = (Player) sender;
 
-            // START DEFAULT INVENTORY
-
-            // This is a menu intended to showcase general functionality.
-
             if (args.length == 0) {
-                // Open a test SpiGUI menu.
+                // Create a test SpiGUI menu.
                 SGMenu myAwesomeMenu = SpiGUITest.getSpiGUI().create("&c&lSpiGUI &c(Page {currentPage}/{maxPage})", 3);
 
                 myAwesomeMenu.setToolbarBuilder((slot, page, defaultType, menu) -> {
                     if (slot == 8) {
                         return new SGButton(
-                            new ItemBuilder(Material.EMERALD)
-                                .name(String.format("&a&l%d gems", gems.getOrDefault(player, 5)))
-                                .lore(
-                                    "&aUse gems to buy cosmetics",
-                                    "&aand other items in the store!",
-                                    "",
-                                    "&7&o(Click to add more)"
-                                )
-                                .build()
-                        ).withListener((event) -> {
+                                new ItemBuilder(Material.EMERALD)
+                                        .name(String.format("&a&l%d gems", gems.getOrDefault(player, 5)))
+                                        .lore(
+                                                "&aUse gems to buy cosmetics",
+                                                "&aand other items in the store!",
+                                                "",
+                                                "&7&o(Click to add more)"
+                                        )
+                                        .build()
+                        ).withListener(event -> {
                             gems.put(player, gems.getOrDefault(player, 5) + 5);
                             player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&a&l&oSUCCESS!  &aYou have been given &25 &agems!"));
-                            menu.refreshInventory(event.getWhoClicked());
+                            menu.refreshInventory(event.getPlayer());
                         });
                     }
 
                     // Fallback to rendering the default button for a slot.
                     return spiGUI.getDefaultToolbarBuilder().buildToolbarButton(slot, page, defaultType, menu);
-
-                    // Or, alternatively, to render a button when NEITHER a custom per-inventory button OR a fallback
-                    // button has been defined:
-                    // (Comment above line and uncomment below to enable this)
-
-                    /*
-
-                    // Ensure fallbackButton is not null before rendering. If it is, render an alternative button
-                    // instead.
-                    SGButton fallbackButton = spiGUI.getDefaultToolbarBuilder().buildToolbarButton(slot, page, defaultType, menu);
-                    if (fallbackButton != null) return fallbackButton;
-
-                    return new SGButton(new ItemBuilder(Material.BARRIER).name(" ").build());
-
-                    // You could check if defaultType is UNASSIGNED, however this won't deal with the cases when the
-                    // previous or next button is not shown (there will be an empty space).
-
-                     */
                 });
 
                 myAwesomeMenu.setButton(0, 10, new SGButton(
@@ -130,7 +108,6 @@ public class SpiGUITest extends JavaPlugin {
                                         "&eExperience: &6" + player.getTotalExperience()
                                 )
                                 .build()
-
                 ));
 
                 myAwesomeMenu.setButton(1, 0, new SGButton(
@@ -138,25 +115,25 @@ public class SpiGUITest extends JavaPlugin {
                                 .name("&6Get rich quick!")
                                 .build()
                 ).withListener(event -> {
-                    Inventory playerInventory = event.getWhoClicked().getInventory();
+                    Inventory playerInventory = event.getPlayer().getInventory();
 
                     IntStream.range(0, 9).forEach(hotBarSlot -> playerInventory.setItem(
                             hotBarSlot, new ItemBuilder(
-                                    event.getCurrentItem().getType() == Material.GOLD_ORE
+                                    event.getButton().getIcon().getType() == Material.GOLD_ORE
                                             ? Material.GOLD_BLOCK
-                                            : event.getCurrentItem().getType()
+                                            : event.getButton().getIcon().getType()
                             ).amount(64).build()
                     ));
 
-                    event.getWhoClicked().sendMessage(
+                    event.getPlayer().sendMessage(
                             ChatColor.translateAlternateColorCodes('&',
-                                    event.getCurrentItem().getType() == Material.GOLD_ORE
+                                    event.getButton().getIcon().getType() == Material.GOLD_ORE
                                             ? "&e&lYou are now rich!"
                                             : "&7&lYou are now poor."
                             )
                     );
 
-                    Material newMaterial = event.getCurrentItem().getType() == Material.GOLD_ORE
+                    Material newMaterial = event.getButton().getIcon().getType() == Material.GOLD_ORE
                             ? Material.DIRT
                             : Material.GOLD_ORE;
 
@@ -166,8 +143,8 @@ public class SpiGUITest extends JavaPlugin {
                             ).amount(1).build()
                     );
 
-                    myAwesomeMenu.refreshInventory(event.getWhoClicked());
-                    ((Player) event.getWhoClicked()).updateInventory();
+                    myAwesomeMenu.refreshInventory(event.getPlayer());
+                    player.updateInventory();
                 }));
 
                 AtomicReference<BukkitTask> borderRunnable = new AtomicReference<>();
@@ -176,12 +153,9 @@ public class SpiGUITest extends JavaPlugin {
                     if (inventory.getCurrentPage() != 0) {
                         if (borderRunnable.get() != null) borderRunnable.get().cancel();
                     } else borderRunnable.set(
-                            inventory.getCurrentPage() != 0
-                                    ? null
-                                    : new BukkitRunnable(){
-
+                            new BukkitRunnable() {
                                 private final int[] TILES_TO_UPDATE = {
-                                        0,  1,  2,  3,  4,  5,  6,  7,  8,
+                                        0, 1, 2, 3, 4, 5, 6, 7, 8,
                                         9,                             17,
                                         18, 19, 20, 21, 22, 23, 24, 25, 26
                                 };
@@ -190,27 +164,22 @@ public class SpiGUITest extends JavaPlugin {
 
                                 @Override
                                 public void run() {
-
-                                    IntStream.range(0, TILES_TO_UPDATE.length).map(i -> TILES_TO_UPDATE.length - i + -1).forEach(
-                                            index -> myAwesomeMenu.setButton(TILES_TO_UPDATE[index], nextColorButton())
-                                    );
-
-                                    currentColor++;
-                                    if (currentColor >= 15) currentColor = 0;
-
+                                    for (int i = 0; i < TILES_TO_UPDATE.length; i++) {
+                                        int index = TILES_TO_UPDATE.length - i - 1;
+                                        myAwesomeMenu.setButton(TILES_TO_UPDATE[index], nextColorButton());
+                                    }
+                                    currentColor = (short) ((currentColor + 1) % 16);
                                     myAwesomeMenu.refreshInventory(player);
-
                                 }
 
                                 private SGButton nextColorButton() {
                                     return new SGButton(
                                             new ItemBuilder(Material.WHITE_STAINED_GLASS_PANE)
                                                     .name("&" + Integer.toHexString(currentColor) + "&lSpiGUI!!!")
-                                                    .data(currentColor) // Ensure this is appropriate for your logic
+                                                    .data(currentColor)
                                                     .build()
                                     );
                                 }
-
                             }.runTaskTimer(this, 0L, 20L)
                     );
                 });
@@ -225,106 +194,12 @@ public class SpiGUITest extends JavaPlugin {
                 return true;
             }
 
-            // END DEFAULT INVENTORY
-
-            // The following are additional menus intended to test specific functionality:
-
-            switch (args[0]) {
-                case "inventorySizeTest": {
-                    int size;
-
-                    if (args.length == 1) {
-                        player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&c&l&oERROR  &cYou must specify an item count as an integer."));
-                        return true;
-                    }
-
-                    try {
-                        size = Integer.parseInt(args[1]);
-                    } catch (NumberFormatException ex) {
-                        player.sendMessage(ChatColor.translateAlternateColorCodes('&', "&c&l&oERROR  &cThe item count must be a valid integer."));
-                        return true;
-                    }
-
-                    // Create a menu with one row, so that pagination values are easy to calculate (each page is a
-                    // multiple of 9, then the remainder can just be added to ensure the number of items match up).
-                    SGMenu inventorySizeTest = SpiGUITest.getSpiGUI().create("Test Menu", 1);
-
-                    IntStream.range(0, size).forEach(i -> inventorySizeTest.addButton(new SGButton(
-                            new ItemBuilder(Material.GOLD_ORE).name(String.format("&6Item %d", i + 1))
-                                    .build()
-                    )));
-
-                    player.openInventory(inventorySizeTest.getInventory());
-                    return true;
-                }
-
-                case "refreshTest": {
-
-                    SGMenu refreshTestMenu = SpiGUITest.getSpiGUI().create("&bMatches", 1);
-
-                    // Generate 3 to 8 random matches.
-                    List<Match> matches = IntStream.range(0, ThreadLocalRandom.current().nextInt(5) + 3)
-                            .mapToObj((i) -> Match.generateFakeMatch(true))
-                            .collect(Collectors.toList());
-
-                    for (int i = 0; i < matches.size(); i++) {
-                        Match match = matches.get(i);
-
-                        refreshTestMenu.setButton(i, new SGButton(new ItemBuilder(match.getKit().getIcon())
-                                .name(match.getKit().getName())
-                                .lore(
-                                    String.format("&a%s &evs. &a%s", match.getPlayerNames()[0], match.getPlayerNames()[1]),
-                                    String.format("&fTime: &b%s", match.getTime()),
-                                    "",
-                                    String.format("&fKit: &b%s", match.getKit().getName()),
-                                    String.format("&fArena: &b%s &7(%s)", match.getArena(), match.getKit().getName())
-                                )
-                                .build()));
-                    }
-
-                    // Start a refresh task for the menu.
-                    AtomicReference<BukkitTask> refreshMatchesTask = new AtomicReference<>(new BukkitRunnable(){
-                        @Override
-                        public void run() {
-                            for (int i = 0; i < matches.size(); i++) {
-                                Match match = matches.get(i);
-
-                                refreshTestMenu.setButton(i, new SGButton(new ItemBuilder(match.getKit().getIcon())
-                                        .flag(ItemFlag.HIDE_ATTRIBUTES)
-                                        .flag(ItemFlag.HIDE_DESTROYS)
-                                        .flag(ItemFlag.HIDE_PLACED_ON)
-                                        .flag(ItemFlag.HIDE_POTION_EFFECTS)
-                                        .name(match.getKit().getName())
-                                        .lore(
-                                                String.format("&a%s &evs. &a%s", match.getPlayerNames()[0], match.getPlayerNames()[1]),
-                                                String.format("&fTime: &b%s", match.getTime()),
-                                                "",
-                                                String.format("&fKit: &b%s", match.getKit().getName()),
-                                                String.format("&fArena: &b%s &7(%s)", match.getArena(), match.getKit().getName())
-                                        )
-                                        .build()));
-                            }
-
-                            refreshTestMenu.refreshInventory(player);
-                        }
-                    }.runTaskTimer(this, 0L, 20L));
-
-                    // Cancel the refresh task when the inventory is closed.
-                    refreshTestMenu.setOnClose(menu -> {
-                        if (refreshMatchesTask.get() != null) refreshMatchesTask.get().cancel();
-                    });
-
-                    player.openInventory(refreshTestMenu.getInventory());
-                    return true;
-
-                }
-            }
-
             player.sendMessage("Unrecognized command.");
         }
 
         return false;
     }
+
 
     public static SpiGUI getSpiGUI() {
         return spiGUI;

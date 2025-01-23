@@ -1,41 +1,79 @@
 package com.samjakob.spigui.menu;
 
 import org.bukkit.entity.Player;
+import java.util.Objects;
 
 /**
- * Used to refer to a player's "viewing session" of a given menu.
+ * Represents an open SGMenu instance associated with a specific player.
  */
 public class SGOpenMenu {
 
-    /** The {@link SGMenu} that is currently open. */
     private final SGMenu gui;
-    /** The player viewing the menu. */
     private final Player player;
 
     /**
-     * Pairs an {@link SGMenu} instance with a player viewing that menu.
-     * @param gui The {@link SGMenu} that is open.
-     * @param player The player viewing the menu.
+     * Constructs an SGOpenMenu instance.
+     *
+     * @param gui    The SGMenu instance.
+     * @param player The player associated with the open menu.
      */
     public SGOpenMenu(SGMenu gui, Player player) {
-        this.gui = gui;
-        this.player = player;
+        this.gui = Objects.requireNonNull(gui, "GUI cannot be null");
+        this.player = Objects.requireNonNull(player, "Player cannot be null");
     }
 
     /**
-     * Get the open {@link SGMenu} instance.
-     * @return The menu that is open.
+     * Gets the SGMenu instance associated with this open menu.
+     *
+     * @return The SGMenu instance.
      */
-    public SGMenu getMenu() {
+    public final SGMenu getMenu() {
         return this.gui;
     }
 
     /**
-     * Get the player viewing the {@link SGMenu}.
-     * @return The player viewing the menu.
+     * Gets the player associated with this open menu.
+     *
+     * @return The player.
      */
-    public Player getPlayer() {
+    public final Player getPlayer() {
         return this.player;
     }
 
+    /**
+     * Provides a string representation of this open menu for debugging purposes.
+     *
+     * @return A string describing this open menu.
+     */
+    @Override
+    public String toString() {
+        return "SGOpenMenu{" +
+                "menu=" + gui +
+                ", player=" + player.getName() +
+                '}';
+    }
+
+    /**
+     * Compares this open menu to another object for equality.
+     *
+     * @param o The object to compare against.
+     * @return True if the objects are equal, false otherwise.
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        SGOpenMenu that = (SGOpenMenu) o;
+        return gui.equals(that.gui) && player.equals(that.player);
+    }
+
+    /**
+     * Computes the hash code for this open menu.
+     *
+     * @return The hash code.
+     */
+    @Override
+    public int hashCode() {
+        return Objects.hash(gui, player);
+    }
 }

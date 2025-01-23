@@ -4,17 +4,8 @@ plugins {
     id 'signing'
 }
 
-group 'com.samjakob'
-version '1.7.0'
-uri "https://github.com/SamJakob/SpiGUI"
-
-java {
-    sourceCompatibility = 1.8
-    targetCompatibility = 1.8
-
-    withJavadocJar()
-    withSourcesJar()
-}
+group = 'com.samjakob'
+version = '1.8.0'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -28,27 +19,33 @@ repositories {
     mavenCentral()
 
     maven {
-        url "https://papermc.io/repo/repository/maven-public/"
+        url = 'https://repo.papermc.io/repository/maven-public/'
     }
 
     maven {
-        name = "sonatype"
-        url = "https://oss.sonatype.org/content/groups/public/"
+        name = 'spigotmc'
+        url = 'https://hub.spigotmc.org/nexus/content/repositories/snapshots/'
+    }
+
+    maven {
+        name = 'sonatype'
+        url = 'https://oss.sonatype.org/content/groups/public/'
     }
 }
 
 dependencies {
+    compileOnly "org.spigotmc:spigot-api:1.20.4-R0.1-SNAPSHOT"
     compileOnly "io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT"
 
     implementation "net.kyori:adventure-api:4.17.0"
     implementation "net.kyori:adventure-text-minimessage:4.17.0"
     implementation "net.kyori:adventure-text-serializer-legacy:4.17.0"
 
+    testImplementation "org.spigotmc:spigot-api:1.20.4-R0.1-SNAPSHOT"
     testImplementation "io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT"
 }
 
-// Builds Spigot runnable plugin from the test package.
-// Can be used to demonstrate and test functionality.
+
 tasks.register('testJar', Jar) {
     from sourceSets.main.output.classesDirs
     from sourceSets.test.output.classesDirs
@@ -57,52 +54,50 @@ tasks.register('testJar', Jar) {
     }
 
     archiveBaseName.set("SpiGUITest")
+    archiveClassifier.set('test')
 }
 
 publishing {
     publications {
-        SpiGUI(MavenPublication) {
+        create('SpiGUI', MavenPublication) {
+            from components.java
+
             pom {
-                name = "SpiGUI"
-                description = "A comprehensive GUI API for Spigot with pages support."
-                url = 'https://github.com/SamJakob/SpiGUI'
-                packaging = 'jar'
+                name.set('SpiGUI')
+                description.set('A comprehensive GUI API for Spigot with pages support.')
+                url.set('https://github.com/SamJakob/SpiGUI')
 
                 licenses {
                     license {
-                        name = 'MIT License'
-                        url = 'https://opensource.org/licenses/MIT'
+                        name.set('MIT License')
+                        url.set('https://opensource.org/licenses/MIT')
                     }
                 }
 
                 developers {
                     developer {
-                        name = 'SamJakob'
-                        email = 'me@samjakob.com'
-                        organization = 'SamJakob'
-                        organizationUrl = 'https://samjakob.com'
+                        id.set('SamJakob')
+                        name.set('Sam Jakob')
+                        email.set('me@samjakob.com')
+                        organization.set('SamJakob')
+                        organizationUrl.set('https://samjakob.com')
                     }
                 }
 
                 scm {
-                    connection = 'scm:git:git://github.com/SamJakob/SpiGUI.git'
-                    developerConnection = 'scm:git:ssh://github.com:SamJakob/SpiGUI.git'
-                    url = 'https://github.com/SamJakob/SpiGUI'
+                    connection.set('scm:git:git://github.com/SamJakob/SpiGUI.git')
+                    developerConnection.set('scm:git:ssh://github.com:SamJakob/SpiGUI.git')
+                    url.set('https://github.com/SamJakob/SpiGUI')
                 }
             }
-
-            from components.java
         }
     }
 
     repositories {
         maven {
-            url = version.endsWith('SNAPSHOT')
-                    // If the version ends with SNAPSHOT, we're building a snapshot
-                    // so deploy to a SNAPSHOT repository.
-                    ? 'https://s01.oss.sonatype.org/content/repositories/snapshots/'
-                    // Otherwise, deploy to a staging repository.
-                    : 'https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/'
+            url = version.endsWith("SNAPSHOT") \
+                    ? "https://s01.oss.sonatype.org/content/repositories/snapshots/" \
+                    : "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
 
             credentials {
                 username = 'el211'
@@ -114,7 +109,7 @@ publishing {
 
 signing {
     useGpgCmd()
-    sign publishing.publications.SpiGUI
+    sign publishing.publications['SpiGUI']
 }
 
 javadoc {
@@ -122,8 +117,13 @@ javadoc {
         options.addBooleanOption('html5', true)
     }
 
-    source = sourceSets.main.java.sourceDirectories
-    classpath += configurations.compileClasspath
+    source = sourceSets.main.allJava
+    classpath += configurations.runtimeClasspath
 
-    options.memberLevel = JavadocMemberLevel.PRIVATE
+    options {
+        encoding = 'UTF-8'
+        memberLevel = JavadocMemberLevel.PRIVATE
+    }
 }
+
+

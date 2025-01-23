@@ -1,47 +1,54 @@
 package com.samjakob.spigui.item;
 
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import net.kyori.adventure.text.Component; // For Adventure Components
-import net.kyori.adventure.text.minimessage.MiniMessage; // For MiniMessage support
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer; // For legacy serialization
-import org.bukkit.ChatColor; // For color code translation (if needed)
-import org.bukkit.Material; // For ItemStack material types
-import org.bukkit.enchantments.Enchantment; // For enchantment handling
-import org.bukkit.inventory.ItemFlag; // For item flag handling
-import org.bukkit.inventory.ItemStack; // For creating/modifying items
-import org.bukkit.inventory.meta.ItemMeta; // For setting item metadata
-import org.bukkit.inventory.meta.SkullMeta; // For skull metadata (if using player heads)
-
-
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
+import org.bukkit.ChatColor;
+import org.bukkit.Color;
+import org.bukkit.Material;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.inventory.ItemFlag;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.LeatherArmorMeta;
+import org.bukkit.inventory.meta.SkullMeta;
 
 /**
- * A helper class for creating or modifying ItemStacks with support for Adventure's Component system, MiniMessage,
- * and legacy string compatibility.
+ * A utility class for building and customizing ItemStacks with ease.
  */
 public class ItemBuilder {
-
     private final ItemStack stack;
 
-    /* CONSTRUCTORS */
-
+    /**
+     * Constructs an ItemBuilder with a given material.
+     *
+     * @param material The material for the item.
+     */
     public ItemBuilder(Material material) {
         this.stack = new ItemStack(material);
     }
 
-    public ItemBuilder(ItemStack stack) {
-        this.stack = stack;
+    public ItemBuilder data(short data) {
+        this.stack.setDurability(data);
+        return this;
     }
 
-    /* ITEM TYPE */
+    /**
+     * Constructs an ItemBuilder with an existing ItemStack.
+     *
+     * @param stack The ItemStack to customize.
+     */
+    public ItemBuilder(ItemStack stack) {
+        this.stack = stack.clone();
+    }
 
+    /**
+     * Sets the material type of the item.
+     *
+     * @param material The material to set.
+     * @return This ItemBuilder instance for chaining.
+     */
     public ItemBuilder type(Material material) {
         this.stack.setType(material);
         return this;
@@ -51,106 +58,74 @@ public class ItemBuilder {
         return this.stack.getType();
     }
 
+    /**
+     * Translates HEX color codes in strings.
+     *
+     * @param input The input string with HEX color codes.
+     * @return The translated string.
+     */
+    public static String translateHexColors(String input) {
+        return input.replaceAll("(?i)&#([0-9A-F]{6})", "§x§$1§x")
+                .replaceAll("(?i)(?<!§x§x)§(?=[0-9A-F]{6})", "");
+    }
 
-    /* NAME METHODS */
+    /**
+     * Applies a color gradient to a string.
+     *
+     * @param text The text to apply the gradient to.
+     * @param startColor The starting color.
+     * @param endColor The ending color.
+     * @return The text with a color gradient applied.
+     */
+    public static String applyGradient(String text, Color startColor, Color endColor) {
+        StringBuilder result = new StringBuilder();
+        int length = text.length();
 
-    public ItemBuilder name(Component name) {
+        for (int i = 0; i < length; i++) {
+            float ratio = (float) i / (length - 1);
+            int red = (int) (startColor.getRed() * (1 - ratio) + endColor.getRed() * ratio);
+            int green = (int) (startColor.getGreen() * (1 - ratio) + endColor.getGreen() * ratio);
+            int blue = (int) (startColor.getBlue() * (1 - ratio) + endColor.getBlue() * ratio);
+
+            String hexColor = String.format("§x§%s§%s§%s§%s§%s§%s",
+                    Integer.toHexString((red >> 4) & 0xF),
+                    Integer.toHexString(red & 0xF),
+                    Integer.toHexString((green >> 4) & 0xF),
+                    Integer.toHexString(green & 0xF),
+                    Integer.toHexString((blue >> 4) & 0xF),
+                    Integer.toHexString(blue & 0xF)
+            );
+            result.append(hexColor).append(text.charAt(i));
+        }
+        return result.toString();
+    }
+
+    /**
+     * Sets the display name of the item.
+     *
+     * @param name The display name to set, supporting HEX color codes.
+     * @return This ItemBuilder instance for chaining.
+     */
+    public ItemBuilder name(String name) {
         ItemMeta meta = this.stack.getItemMeta();
         if (meta != null) {
-            meta.displayName(name); // Modern API for Adventure Components
+            meta.setDisplayName(ChatColor.RESET + translateHexColors(name));
             this.stack.setItemMeta(meta);
         }
         return this;
-    }
-
-
-
-
-
-    public ItemBuilder nameFromMiniMessage(String miniMessage) {
-        return this.name(MiniMessage.miniMessage().deserialize(miniMessage));
-    }
-
-    public ItemBuilder name(String name) {
-        return this.name(LegacyComponentSerializer.legacyAmpersand().deserialize(name));
-    }
-
-    public ItemBuilder nameWithChatColor(String name) {
-        return this.name(ChatColor.translateAlternateColorCodes('&', name));
-    }
-
-    public Component getNameComponent() {
-        if (!this.stack.hasItemMeta()) {
-            return null;
-        }
-        String legacyName = this.stack.getItemMeta().getDisplayName();
-        return legacyName != null && !legacyName.isEmpty()
-                ? LegacyComponentSerializer.legacySection().deserialize(legacyName)
-                : null;
     }
 
     public String getName() {
-        Component nameComponent = this.getNameComponent();
-        return nameComponent != null ? LegacyComponentSerializer.legacyAmpersand().serialize(nameComponent) : null;
-    }
-
-    /* LORE METHODS */
-
-    public ItemBuilder lore(List<Component> lore) {
         ItemMeta meta = this.stack.getItemMeta();
-        if (meta != null) {
-            meta.lore(lore); // Modern API for Adventure Components
-            this.stack.setItemMeta(meta);
-        }
-        return this;
+        return (meta != null && meta.hasDisplayName()) ? meta.getDisplayName() : null;
     }
 
-    public ItemBuilder lore(Component... lore) {
-        return lore(Arrays.asList(lore)); // Delegate to the List<Component> implementation
-    }
-
-
-
-    public ItemBuilder loreFromMiniMessage(List<String> miniMessages) {
-        List<Component> components = miniMessages.stream()
-                .map(MiniMessage.miniMessage()::deserialize)
-                .collect(Collectors.toList());
-        return this.lore(components);
-    }
-
-    public ItemBuilder lore(String... lore) {
-        return this.lore(Arrays.stream(lore)
-                .map(LegacyComponentSerializer.legacyAmpersand()::deserialize)
-                .collect(Collectors.toList()));
-    }
-
-    public ItemBuilder loreWithChatColor(String... lore) {
-        return this.lore(Arrays.stream(lore)
-                .map(line -> LegacyComponentSerializer.legacyAmpersand().deserialize(
-                        ChatColor.translateAlternateColorCodes('&', line)))
-                .collect(Collectors.toList()));
-    }
-
-    public List<Component> getLoreComponents() {
-        if (!this.stack.hasItemMeta() || this.stack.getItemMeta().getLore() == null) {
-            return null;
-        }
-        return this.stack.getItemMeta().getLore().stream()
-                .map(LegacyComponentSerializer.legacySection()::deserialize)
-                .collect(Collectors.toList());
-    }
-
-    public List<String> getLore() {
-        List<Component> loreComponents = this.getLoreComponents();
-        return loreComponents != null
-                ? loreComponents.stream()
-                .map(LegacyComponentSerializer.legacyAmpersand()::serialize)
-                .collect(Collectors.toList())
-                : null;
-    }
-
-    /* ITEM AMOUNT */
-
+    /**
+     * Sets the amount of items in the stack.
+     *
+     * @param amount The number of items in the stack.
+     * @return This ItemBuilder instance for chaining.
+     */
     public ItemBuilder amount(int amount) {
         this.stack.setAmount(amount);
         return this;
@@ -160,7 +135,44 @@ public class ItemBuilder {
         return this.stack.getAmount();
     }
 
-    /* DURABILITY / DATA / COLOR */
+    /**
+     * Sets the lore of the item.
+     *
+     * @param lore The lore lines to set.
+     * @return This ItemBuilder instance for chaining.
+     */
+    public ItemBuilder lore(String... lore) {
+        return this.lore(Arrays.asList(lore));
+    }
+
+    public ItemBuilder lore(List<String> lore) {
+        lore.replaceAll(line -> ChatColor.RESET + translateHexColors(line));
+        ItemMeta meta = this.stack.getItemMeta();
+        if (meta != null) {
+            meta.setLore(lore);
+            this.stack.setItemMeta(meta);
+        }
+        return this;
+    }
+
+    public List<String> getLore() {
+        ItemMeta meta = this.stack.getItemMeta();
+        return (meta != null && meta.hasLore()) ? meta.getLore() : null;
+    }
+
+    /**
+     * Sets the color for leather armor.
+     *
+     * @param color The color to set.
+     * @return This ItemBuilder instance for chaining.
+     */
+    public ItemBuilder leatherArmorColor(Color color) {
+        if (this.stack.getItemMeta() instanceof LeatherArmorMeta meta) {
+            meta.setColor(color);
+            this.stack.setItemMeta(meta);
+        }
+        return this;
+    }
 
     public ItemBuilder durability(short durability) {
         this.stack.setDurability(durability);
@@ -171,20 +183,13 @@ public class ItemBuilder {
         return this.stack.getDurability();
     }
 
-    public ItemBuilder data(short data) {
-        return this.durability(data);
-    }
-
-    public ItemBuilder color(ItemDataColor color) {
-        return this.durability(color.getValue());
-    }
-
-    public ItemDataColor getColor() {
-        return ItemDataColor.getByValue(this.stack.getDurability());
-    }
-
-    /* ENCHANTMENTS */
-
+    /**
+     * Adds an unsafe enchantment to the item.
+     *
+     * @param enchantment The enchantment to add.
+     * @param level       The level of the enchantment.
+     * @return This ItemBuilder instance for chaining.
+     */
     public ItemBuilder enchant(Enchantment enchantment, int level) {
         this.stack.addUnsafeEnchantment(enchantment, level);
         return this;
@@ -195,51 +200,69 @@ public class ItemBuilder {
         return this;
     }
 
-    /* ITEM FLAGS */
-
+    /**
+     * Adds item flags to hide specific item attributes in the tooltip.
+     *
+     * @param flags The flags to add.
+     * @return This ItemBuilder instance for chaining.
+     */
     public ItemBuilder flag(ItemFlag... flags) {
         ItemMeta meta = this.stack.getItemMeta();
-        meta.addItemFlags(flags);
-        this.stack.setItemMeta(meta);
+        if (meta != null) {
+            meta.addItemFlags(flags);
+            this.stack.setItemMeta(meta);
+        }
         return this;
     }
 
     public ItemBuilder deflag(ItemFlag... flags) {
         ItemMeta meta = this.stack.getItemMeta();
-        meta.removeItemFlags(flags);
-        this.stack.setItemMeta(meta);
+        if (meta != null) {
+            meta.removeItemFlags(flags);
+            this.stack.setItemMeta(meta);
+        }
         return this;
     }
 
-    /* SKULL OWNER */
-
+    /**
+     * Sets the skull owner for player head items.
+     *
+     * @param name The player's name.
+     * @return This ItemBuilder instance for chaining.
+     */
     public ItemBuilder skullOwner(String name) {
-        if (!(this.stack.getItemMeta() instanceof SkullMeta)) {
-            return this;
-        }
-        this.stack.setDurability((short) 3);
-        SkullMeta meta = (SkullMeta) this.stack.getItemMeta();
-        meta.setOwner(name);
-        this.stack.setItemMeta(meta);
-        return this;
-    }
-
-    /* CONDITIONAL OPERATIONS */
-
-    public ItemBuilder ifThen(Predicate<ItemBuilder> condition, Function<ItemBuilder, Object> action) {
-        if (condition.test(this)) {
-            action.apply(this);
+        if (this.stack.getItemMeta() instanceof SkullMeta meta) {
+            this.stack.setDurability((short) 3); // Set durability to player skull type
+            meta.setOwner(name);
+            this.stack.setItemMeta(meta);
         }
         return this;
     }
 
-    /* BUILD METHODS */
+    /**
+     * Conditionally applies a function if a predicate is true.
+     *
+     * @param ifTrue The condition to check.
+     * @param then   The function to apply if true.
+     * @return This ItemBuilder instance for chaining.
+     */
+    public ItemBuilder ifThen(Predicate<ItemBuilder> ifTrue, Function<ItemBuilder, Object> then) {
+        if (ifTrue.test(this)) {
+            then.apply(this);
+        }
+        return this;
+    }
 
+    /**
+     * Builds the item stack.
+     *
+     * @return The customized ItemStack.
+     */
     public ItemStack build() {
-        return this.stack;
+        return this.get();
     }
 
     public ItemStack get() {
-        return this.stack;
+        return this.stack.clone();
     }
 }

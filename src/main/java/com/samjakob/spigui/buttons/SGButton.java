@@ -1,48 +1,62 @@
 package com.samjakob.spigui.buttons;
 
+import com.samjakob.spigui.events.SGButtonClickEvent;
 import org.bukkit.inventory.ItemStack;
 
 /**
- * An SGButton represents a clickable item in an SGMenu (GUI).
- * It consists of an icon ({@link ItemStack}) and a listener ({@link SGButton}).
- * <br>
- * When the icon is clicked in the SGMenu, the listener is called, thus allowing
- * for rudimentary menus to be built by displaying icons and overriding their behavior.
- * <br>
- * This somewhat resembles the point-and-click nature of Graphical User Interfaces (GUIs)
- * popularized by Operating Systems developed in the late 80s and 90s which is where the
- * name of the concept in Spigot plugins was derived.
+ * Represents a button in the SG GUI, which consists of an icon and an optional listener for interactions.
  */
 public class SGButton {
-
-    /** The on-click handler for this button. */
+    private ItemStack icon; // Removed 'final' to allow dynamic updates
     private SGButtonListener listener;
 
-    /** The Bukkit {@link ItemStack} that will be used as the button's icon. */
-    private ItemStack icon;
-
     /**
-     * Creates an SGButton with the specified {@link ItemStack} as it's 'icon' in the inventory.
+     * Creates an SGButton with the specified icon.
      *
-     * @param icon The desired 'icon' for the SGButton.
+     * @param icon The item stack representing the button's icon.
      */
-    public SGButton(ItemStack icon){
+    public SGButton(ItemStack icon) {
+        if (icon == null) {
+            throw new IllegalArgumentException("Icon cannot be null.");
+        }
         this.icon = icon;
     }
 
     /**
-     * Sets the {@link SGButtonListener} to be called when the button is clicked.
-     * @param listener The listener to be called when the button is clicked.
+     * Sets the icon for this button dynamically.
+     *
+     * @param icon The new icon for the button.
+     */
+    public void setIcon(ItemStack icon) {
+        if (icon == null) {
+            throw new IllegalArgumentException("Icon cannot be null.");
+        }
+        this.icon = icon;
+    }
+
+    /**
+     * Gets the listener associated with this button.
+     *
+     * @return The listener, or null if none is set.
+     */
+    public SGButtonListener getListener() {
+        return listener;
+    }
+
+    /**
+     * Sets the listener for this button.
+     *
+     * @param listener The listener to handle button interactions.
      */
     public void setListener(SGButtonListener listener) {
         this.listener = listener;
     }
 
     /**
-     * A chainable alias of {@link #setListener(SGButtonListener)}.
+     * Sets the listener for this button using a fluent API.
      *
-     * @param listener The listener to be called when the button is clicked.
-     * @return The {@link SGButton} the listener was applied to.
+     * @param listener The listener to handle button interactions.
+     * @return This button instance for chaining.
      */
     public SGButton withListener(SGButtonListener listener) {
         this.listener = listener;
@@ -50,33 +64,65 @@ public class SGButton {
     }
 
     /**
-     * Returns the {@link SGButtonListener} that is to be executed when the button
-     * is clicked.<br>
-     * This is typically intended for use by the API.
+     * Gets the icon associated with this button.
      *
-     * @return The listener to be called when the button is clicked.
-     */
-    public SGButtonListener getListener() {
-        return listener;
-    }
-
-    /**
-     * Returns the {@link ItemStack} that will be used as the SGButton's icon in the
-     * SGMenu (GUI).
-     *
-     * @return The icon ({@link ItemStack}) that will be used to represent the button.
+     * @return The item stack representing the button's icon.
      */
     public ItemStack getIcon() {
         return icon;
     }
 
     /**
-     * Changes the SGButton's icon.
+     * Safely invokes the listener for this button, if one is set.
      *
-     * @param icon The icon ({@link ItemStack}) that will be used to represent the button.
+     * @param event The event to pass to the listener.
      */
-    public void setIcon(ItemStack icon) {
-        this.icon = icon;
+    public void invokeListener(SGButtonClickEvent event) {
+        if (listener != null) {
+            listener.onClick(event);
+        }
     }
 
+    /**
+     * Builder class for creating immutable SGButton instances.
+     */
+    public static class Builder {
+        private final ItemStack icon;
+        private SGButtonListener listener;
+
+        /**
+         * Creates a new builder with the specified icon.
+         *
+         * @param icon The icon for the button.
+         * @throws IllegalArgumentException if the icon is null.
+         */
+        public Builder(ItemStack icon) {
+            if (icon == null) {
+                throw new IllegalArgumentException("Icon cannot be null.");
+            }
+            this.icon = icon;
+        }
+
+        /**
+         * Sets the listener for the button.
+         *
+         * @param listener The listener for the button.
+         * @return This builder instance for chaining.
+         */
+        public Builder withListener(SGButtonListener listener) {
+            this.listener = listener;
+            return this;
+        }
+
+        /**
+         * Builds and returns a new SGButton instance.
+         *
+         * @return The newly created SGButton.
+         */
+        public SGButton build() {
+            SGButton button = new SGButton(icon);
+            button.setListener(listener);
+            return button;
+        }
+    }
 }
