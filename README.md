@@ -1,3 +1,50 @@
+# SpiGUI RECODED
+
+SpiGUI is a robust and flexible inventory management library for Bukkit/Spigot/Paper Minecraft plugins. It simplifies creating custom GUIs with features like pagination, stickied slots, HEX color and gradient support, and more.
+
+## Features
+
+- **Easy-to-Use API**: Create and manage custom GUIs with minimal boilerplate.
+- **Pagination**: Automatic pagination for GUIs with toolbar support.
+- **Stickied Slots**: Persistent slots that remain across all pages.
+- **HEX Colors and Gradients**: Supports HEX colors and gradients for inventory titles, item names, and lore.
+- **Event Handling**: Includes `SGButtonClickEvent` for precise control over button interactions.
+- **Customizable Toolbar**: Define toolbar buttons for pagination or custom actions.
+- **Advanced Item Building**: Use `ItemBuilder` to create and customize items with support for colors, lore, enchantments, and more.
+
+## Requirements
+
+- **Minecraft Server**: Bukkit/Spigot/Paper
+- **Java Version**: Java 8 or higher
+
+## Installation
+
+1. Clone or download the repository.
+2. Add the JAR file to your server's `plugins` folder.
+3. Restart your server.
+
+## Getting Started
+
+### Setting Up a Basic GUI
+```java
+SpiGUI spiGUI = new SpiGUI(this);
+
+// Create a new menu
+SGMenu menu = spiGUI.create("&6&lMy Custom GUI", 3);
+
+// Add buttons to the menu
+menu.setButton(0, new SGButton(
+    new ItemBuilder(Material.DIAMOND)
+        .name("&bShiny Diamond")
+        .lore("&7This is a special item!")
+        .build()
+).withListener(event -> {
+    event.getWhoClicked().sendMessage("You clicked the diamond!");
+}));
+
+// Open the menu for a player
+player.openInventory(menu.getInventory());
+
 # SpiGUI
 A comprehensive inventory menu API for Spigot with pages support. Supports Bukkit/Spigot 1.7 - 1.20 (see [Version Notes](#version-notes)) (Future versions ought to work just fine too!).
 <p>
